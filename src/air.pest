@@ -1,0 +1,53 @@
+file = { SOI ~ (comment_or_whitespace | action| ignored_line  )* ~ ending_comment* ~ EOI }
+
+action = { action_def ~ (clsn_group | loopstart | interpolation_group | action_element)* }
+action_def = { "[" ~ ^"begin" ~ ^"action" ~ uint+ ~ "]" ~ comment_or_whitespace* }
+clsn_group = { clsn_def ~ clsn_box+ }
+interpolation_group = { interpolation? ~ action_element ~ interpolation? ~ action_element }
+
+clsn = { ^"Clsn" ~ ( "1" | "2") }
+clsn_default = { clsn ~ ^"Default"}
+clsn_box_def = { clsn ~ "[" ~ uint ~ "]" ~ "=" }
+clsn_box = { clsn_box_def ~ clsn_elements ~ comment_or_whitespace*}
+clsn_def = { (clsn_default | clsn)  ~  ":" ~  uint ~ comment_or_whitespace* }
+clsn_elements = { int ~ comma ~ int ~ comma ~ int ~ comma ~ int }
+
+loopstart = { ^"loopstart" ~ NEWLINE }
+
+group = { int }
+image = { uint }
+offset = { int }
+time = { int }
+
+action_element = { base_animation_element ~ (comma ~ optional_animation_params)? ~ comment_or_whitespace* }
+base_animation_element = { group ~ comma ~ image ~ comma ~ offset ~ comma ~ offset ~ comma ~ time }
+
+optional_animation_params = {
+    flip?
+    ~ (comma ~ blend)?
+    ~ (comma ~ scale)?
+    ~ (comma ~ scale)?
+    ~ (comma ~ rotation)?
+}
+
+flip = { ^"HV" | ^"VH" | ^"H" | ^"V" }
+blend_alpha = { ^"AS" ~ uint ~ ^"D" ~ uint }
+blend = { blend_alpha | ^"A" | ^"A1" | ^"S"   }
+
+rotation = { int }
+scale = { float }
+
+interpolation_type = { (^"Blend" | ^"Offset" | ^"Scale" | ^"Angle")+ }
+interpolation = { ^"Interpolate" ~ interpolation_type ~ comment_or_whitespace* }
+
+WHITESPACE = _{ (" " | "\t")+ }  // Handle spaces and tabs
+comment = _{ ";" ~ (!NEWLINE ~ ANY)* ~ NEWLINE }
+ending_comment = _{";" ~ (!NEWLINE ~ ANY)* }
+NEWLINE = _{ "\n" }
+comment_or_whitespace = _{ NEWLINE | WHITESPACE | comment }
+ignored_line = _{ (!NEWLINE ~ ANY)+ ~ NEWLINE }
+float = { (ASCII_DIGIT | "." | "-")+ }
+int = { (ASCII_DIGIT | "-")+ }
+uint = { ASCII_DIGIT+ }
+num = { float | int }
+comma = _{ "," }
