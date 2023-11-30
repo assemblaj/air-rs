@@ -1,6 +1,6 @@
 file = { SOI ~ (comment_or_whitespace | action| ignored_line  )* ~ ending_comment* ~ EOI }
 
-action = { action_def ~ (clsn_group | loopstart | interpolation_group | action_element)* }
+action = { action_def ~ (clsn_group | loopstart | interpolation | action_element)* }
 action_def = { "[" ~ ^"begin" ~ ^"action" ~ uint+ ~ "]" ~ comment_or_whitespace* }
 clsn_group = { clsn_def ~ clsn_box+ }
 interpolation_group = { interpolation? ~ action_element ~ interpolation? ~ action_element }
@@ -15,20 +15,26 @@ clsn_elements = { int ~ comma ~ int ~ comma ~ int ~ comma ~ int }
 loopstart = { ^"loopstart" ~ NEWLINE }
 
 group = { int }
-image = { uint }
+image = { int }
 offset = { int }
 time = { int }
 
-action_element = { base_animation_element ~ (comma ~ optional_animation_params)? ~ comment_or_whitespace* }
+action_element = { base_animation_element ~ (optional_animation_params)? ~ comment_or_whitespace* }
 base_animation_element = { group ~ comma ~ image ~ comma ~ offset ~ comma ~ offset ~ comma ~ time }
 
-optional_animation_params = {
-    flip?
-    ~ (comma ~ blend)?
-    ~ (comma ~ scale)?
-    ~ (comma ~ scale)?
-    ~ (comma ~ rotation)?
-}
+optional_animation_params = { comma ~(flip | comment_or_whitespace )? ~
+                              (!NEWLINE ~ (comma ~ blend) | comma | comment_or_whitespace)? ~
+                              (!NEWLINE ~ (comma ~ x_scale) | comma | comment_or_whitespace)? ~
+                              (!NEWLINE ~ (comma ~ y_scale) | comma | comment_or_whitespace)? ~
+                              (!NEWLINE ~ (comma ~ rotation) | comma | comment_or_whitespace)? }
+
+//optional_animation_params = {
+//    flip?
+//    ~ (comma ~ blend)?
+//    ~ (comma ~ scale)?
+//    ~ (comma ~ scale)?
+//    ~ (comma ~ rotation)?
+//}
 
 flip = { ^"HV" | ^"VH" | ^"H" | ^"V" }
 blend_alpha = { ^"AS" ~ uint ~ ^"D" ~ uint }
@@ -36,6 +42,8 @@ blend = { blend_alpha | ^"A" | ^"A1" | ^"S"   }
 
 rotation = { int }
 scale = { float }
+x_scale = { scale }
+y_scale = { scale }
 
 interpolation_type = { (^"Blend" | ^"Offset" | ^"Scale" | ^"Angle")+ }
 interpolation = { ^"Interpolate" ~ interpolation_type ~ comment_or_whitespace* }
@@ -43,11 +51,11 @@ interpolation = { ^"Interpolate" ~ interpolation_type ~ comment_or_whitespace* }
 WHITESPACE = _{ (" " | "\t")+ }  // Handle spaces and tabs
 comment = _{ ";" ~ (!NEWLINE ~ ANY)* ~ NEWLINE }
 ending_comment = _{";" ~ (!NEWLINE ~ ANY)* }
-NEWLINE = _{ "\n" }
+// NEWLINE = _{ "\n" }
 comment_or_whitespace = _{ NEWLINE | WHITESPACE | comment }
-ignored_line = _{ (!NEWLINE ~ ANY)+ ~ NEWLINE }
-float = { (ASCII_DIGIT | "." | "-")+ }
-int = { (ASCII_DIGIT | "-")+ }
-uint = { ASCII_DIGIT+ }
+ignored_line = { (!NEWLINE ~ ANY)+ ~ NEWLINE }
+float = @{ "-"? ~ ("0" | ASCII_NONZERO_DIGIT ~ ASCII_DIGIT*) ~ ("." ~ ASCII_DIGIT*)? }
+int = @{ "-"? ~ ("0" | ASCII_NONZERO_DIGIT ~ ASCII_DIGIT*) }
+uint = @{ ("0" | ASCII_NONZERO_DIGIT ~ ASCII_DIGIT*) }
 num = { float | int }
 comma = _{ "," }
